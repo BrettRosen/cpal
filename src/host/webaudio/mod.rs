@@ -313,9 +313,14 @@ impl DeviceTrait for Device {
                         let time_at_start_of_buffer = time_handle
                             .read()
                             .expect("Unable to get a read lock on the time cursor");
-                        // Synchronise first buffer as necessary (eg. keep the time value
-                        // referenced to the context clock).
-                        if *time_at_start_of_buffer > 0.001 {
+                        // Synchronise the first buffer, and any buffer that fell behind
+                        // the context clock, to it. (Arena of Champions patch: upstream
+                        // only synchronised the first, so once the page's thread stalled
+                        // for longer than the buffers last, the cursor stayed behind for
+                        // good and every buffer after played as soon as the last ended,
+                        // with nothing queued ahead: audible gaps for the rest of the
+                        // session.)
+                        if *time_at_start_of_buffer > now {
                             *time_at_start_of_buffer
                         } else {
                             // 25ms of time to fetch the first sample data, increase to avoid
